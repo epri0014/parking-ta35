@@ -8,5 +8,5 @@ conda activate parking-api
 pip install -r requirements.txt
 
 # Run the API locally
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --port 8000
 

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Parking Finder TA35 - Prediction</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/styles.css" />
+
+  <style>
+    #map { height: 80vh; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold" href="#">Parking Finder TA35</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+    
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="index.html">Real-Time</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" href="prediction.html">Prediction</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="insight.html">Data Insight</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-3">
+    <h2>Prediction</h2>
+
+    <div class="row g-2 align-items-end mb-2">
+      <div class="col-12 col-md-6 position-relative">
+        <input type="text" id="searchBox" class="form-control dropdown-toggle pe-5" data-bs-toggle="dropdown" placeholder="Type a location..." autocomplete="off">
+        <button id="clearBtn" type="button" class="btn btn-sm position-absolute top-50 end-0 translate-middle-y me-2 d-none">&times;</button>
+        <ul class="dropdown-menu w-100" id="searchResults">
+          <li><a class="dropdown-item" href="#" data-type="my-location">&#128205; My Location</a></li>
+        </ul>
+      </div>
+      <div class="col-12 col-md-6">
+        <label for="dtPicker" class="form-label mb-1">Select date & time (future)</label>
+        <input type="datetime-local" id="dtPicker" class="form-control" disabled>
+        <div class="form-text">Pick a location first, then choose a future time to predict availability.</div>
+      </div>
+    </div>
+
+    <div id="map"></div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Axios -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <!-- Config -->
+  <script src="js/env.js"></script>
+  <!-- App Logic -->
+  <script src="js/prediction.js"></script>
+</body>
+</html>
