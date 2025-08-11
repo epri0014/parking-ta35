@@ -1,8 +1,8 @@
 from dateutil import parser
 from datetime import datetime
-import pytz
+from zoneinfo import ZoneInfo
 
-MEL_TZ = pytz.timezone("Australia/Melbourne")
+MEL_TZ = ZoneInfo("Australia/Melbourne")
 
 def parse_to_melbourne(dt_iso: str) -> datetime:
     """
