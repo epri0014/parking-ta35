@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query, HTTPException
-from app.services import nominatim, melbourne_data
+from app.services import nominatim, melbourne_data, insights
 from app.services.predict import predict_for_candidates
 from app.schemas.prediction import PredictionRequest, PredictionResponse, PredictionResult
 from app.utils.time import parse_to_melbourne, derive_time_features
@@ -47,3 +47,15 @@ async def predict_parking(body: PredictionRequest):
         model_info={"name": "RandomForestClassifier", "accuracy_estimate": 0.693},
         results=[PredictionResult(**r) for r in results]
     )
+
+@router.get("/insights/states")
+def get_states():
+    return insights.fetch_states()
+
+@router.get("/insights/population")
+def get_population(state_id: int):
+    return insights.fetch_population(state_id)
+
+@router.get("/insights/vehicles")
+def get_motor_vehicles(state_id: int):
+    return insights.fetch_motor_vehicles(state_id)

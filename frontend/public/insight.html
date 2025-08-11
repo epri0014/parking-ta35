@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Parking Finder TA35 - Data Insight</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* Give charts breathing room and fixed height */
+    .chart-wrap {
+      height: 60vh;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold" href="#">Parking Finder TA35</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link" href="index.html">Real-Time</a></li>
+          <li class="nav-item"><a class="nav-link" href="prediction.html">Prediction</a></li>
+          <li class="nav-item"><a class="nav-link active" href="insight.html">Data Insight</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-3">
+    <h2 class="mb-3">Data Insight</h2>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs" id="insightTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="vehicles-tab" data-bs-toggle="tab" data-bs-target="#vehicles-pane" type="button" role="tab" aria-controls="vehicles-pane" aria-selected="true">
+          Car Ownership Trend
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="population-tab" data-bs-toggle="tab" data-bs-target="#population-pane" type="button" role="tab" aria-controls="population-pane" aria-selected="false">
+          Population Trend
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content pt-3">
+      <!-- Vehicles tab -->
+      <div class="tab-pane fade show active" id="vehicles-pane" role="tabpanel" aria-labelledby="vehicles-tab" tabindex="0">
+        <div class="row g-3 align-items-end mb-2">
+          <div class="col-12 col-md-6">
+            <label for="stateSelectVehicles" class="form-label mb-1">Select State (Vehicles)</label>
+            <select id="stateSelectVehicles" class="form-select"></select>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="vehicleChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Population tab -->
+      <div class="tab-pane fade" id="population-pane" role="tabpanel" aria-labelledby="population-tab" tabindex="0">
+        <div class="row g-3 align-items-end mb-2">
+          <div class="col-12 col-md-6">
+            <label for="stateSelectPopulation" class="form-label mb-1">Select State (Population)</label>
+            <select id="stateSelectPopulation" class="form-select"></select>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="populationChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Axios -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <!-- ENV -->
+  <script src="js/env.js"></script>
+  <!-- App Logic -->
+  <script src="js/insight.js"></script>
+</body>
+</html>

@@ -8,3 +8,4 @@ scikit-learn
 joblib
 python-dateutil
 pytz
+supabase
