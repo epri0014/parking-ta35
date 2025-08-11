@@ -1,5 +1,5 @@
 ---
-title: "Victoria Car Ownership Growth — Epic 1 • AC 1.1"
+title: "Epic 1 — Data Insights (AC 1.1 & AC 1.2)"
 author: "Team parking‑t35"
 date: "`r format(Sys.Date())`"
 output:
@@ -9,210 +9,324 @@ output:
 runtime: shiny
 ---
 
-```{r data-insights, echo=FALSE, message=FALSE, warning=FALSE}
+```{r app, echo=FALSE, message=FALSE, warning=FALSE}
 # =========================
-# Libraries (kept lean and reliable)
+# Libraries (lean + reliable)
 # =========================
-pkgs <- c(
-  "readr","dplyr","tidyr","stringr","janitor","purrr","tibble",
-  "ggplot2","plotly","DT","shiny","scales"
-)
+pkgs <- c("readr","readxl","dplyr","tidyr","stringr","janitor","purrr","tibble",
+          "ggplot2","plotly","DT","shiny","scales")
 to_install <- pkgs[!pkgs %in% rownames(installed.packages())]
 if (length(to_install)) install.packages(to_install, repos = "https://cloud.r-project.org")
 invisible(lapply(pkgs, library, character.only = TRUE))
 options(scipen = 999)
-
-# small helper (null-coalescing)
 `%||%` <- function(a, b) if (is.null(a)) b else a
 
 # =========================
-# Subtle styling for a polished look
+# Shared styling
 # =========================
 tags$head(tags$style(HTML("
 .value-box { background:#0d6efd10; border:1px solid #0d6efd30; border-radius:14px; padding:14px; }
 .value-box h5 { margin:0; opacity:.8; font-weight:600; }
 .value-box h3 { margin:2px 0 0; font-weight:800; letter-spacing:.2px; }
-.badge-soft { background:#19875412; color:#198754; border:1px solid #19875433; padding:4px 10px; border-radius:999px; }
+.value-box.green { background:#19875412; border-color:#19875433; }
+.badge-soft { background:#0000000e; color:#0d6efd; border:1px solid #0d6efd30; padding:4px 10px; border-radius:999px; }
 .section-title { margin-top:6px; margin-bottom:6px; }
+hr { margin: 10px 0 14px 0; }
 ")))
 
-# =========================
-# Read raw CSV (no header assumptions)
-# Expected layout:
-# parking-t35/
-#   data/Australian Bureau of Statistics.csv
-#   Data-insights.Rmd
-# =========================
-csv_path <- "data/Australian Bureau of Statistics.csv"
-raw <- readr::read_csv(csv_path, col_names = FALSE, show_col_types = FALSE,
-                       na = c("", "NA", "-", "—"))
-raw <- raw %>% mutate(across(everything(), ~ if (is.character(.x)) trimws(.x) else .x))
-stopifnot(nrow(raw) >= 3, ncol(raw) >= 3)
+# ==========================================================
+# ================ AC 1.1 — VEHICLES (CSV) ================
+# ==========================================================
+veh_csv <- "data/Australian Bureau of Statistics.csv"
 
-# The ABS sheet has two header rows: periods + sublabels
-hdr1 <- as.character(raw[1, , drop = TRUE])  # e.g., "Between 2018 and 2019"
-hdr2 <- as.character(raw[2, , drop = TRUE])  # e.g., "no.", "%"
-data <- raw[-c(1,2), , drop = FALSE]
-names(data) <- paste0("X", seq_len(ncol(data)))  # avoid 'across' dependence
+veh_raw <- readr::read_csv(veh_csv, col_names = FALSE, show_col_types = FALSE,
+                           na = c("", "NA", "-", "—"))
+veh_raw <- veh_raw %>% mutate(across(everything(), ~ if (is.character(.x)) trimws(.x) else .x))
 
-# Forward‑fill the period titles across blank/Unnamed cells
-ffill <- function(x){
-  last <- NA_character_; out <- character(length(x))
-  for (i in seq_along(x)) {
-    if (!is.na(x[i]) && nzchar(x[i]) && !grepl("^Unnamed", x[i], ignore.case = TRUE)) last <- x[i]
-    out[i] <- last
+if (nrow(veh_raw) >= 3 && ncol(veh_raw) >= 3) {
+  v_hdr1 <- as.character(veh_raw[1, , drop = TRUE])
+  v_hdr2 <- as.character(veh_raw[2, , drop = TRUE])
+  v_data <- veh_raw[-c(1,2), , drop = FALSE]
+  names(v_data) <- paste0("X", seq_len(ncol(v_data)))
+
+  ffill <- function(x){
+    last <- NA_character_; out <- character(length(x))
+    for (i in seq_along(x)) {
+      if (!is.na(x[i]) && nzchar(x[i]) && !grepl("^Unnamed", x[i], ignore.case = TRUE)) last <- x[i]
+      out[i] <- last
+    }
+    out
   }
-  out
-}
-periods <- ffill(hdr1)
+  v_periods <- ffill(v_hdr1)
 
-# Normalise sub‑labels
-sub <- tolower(gsub("\\.+$", "", hdr2))                 # "no." -> "no"
-sub[sub %in% c("%","percent","perc","per cent")] <- "percent"
-sub[is.na(sub) | sub == ""] <- "no"
+  v_sub <- tolower(gsub("\\.+$", "", v_hdr2))
+  v_sub[v_sub %in% c("%","percent","perc","per cent")] <- "percent"
+  v_sub[is.na(v_sub) | v_sub == ""] <- "no"
 
-# =========================
-# Find which column actually holds the state names
-# (your file has no header for this column)
-# =========================
-state_pat <- "(?i)^(nsw|new south wales|vic\\.?|victoria|qld|queensland|wa|western australia|sa|south australia|tas|tasmania|act|australian capital territory|nt|northern territory)\\b"
-scan_rows <- seq_len(min(nrow(data), 30))
-hit_counts <- sapply(seq_len(ncol(data)), function(j){
-  vals <- as.character(data[scan_rows, j, drop = TRUE]); vals <- vals[!is.na(vals)]
-  sum(stringr::str_detect(vals, state_pat))
-})
-state_idx <- if (any(hit_counts > 0)) which.max(hit_counts) else 1L
-state_col <- paste0("X", state_idx)
+  state_pat <- "(?i)^(nsw|new south wales|vic\\.?|victoria|qld|queensland|wa|western australia|sa|south australia|tas|tasmania|act|australian capital territory|nt|northern territory)\\b"
+  scan_rows <- seq_len(min(nrow(v_data), 30))
+  v_hits <- sapply(seq_len(ncol(v_data)), function(j){
+    vals <- as.character(v_data[scan_rows, j, drop = TRUE]); vals <- vals[!is.na(vals)]
+    sum(stringr::str_detect(vals, state_pat))
+  })
+  v_state_idx <- if (any(v_hits > 0)) which.max(v_hits) else 1L
 
-# =========================
-# Identify the “Between YYYY and YYYY” columns and parse years
-# =========================
-meta <- tibble(
-  col_index = seq_len(ncol(data)),
-  colname   = paste0("X", col_index),
-  period    = periods,
-  metric    = sub
-) %>%
-  mutate(
+  v_meta <- tibble(
+    col_index = seq_len(ncol(v_data)),
+    colname   = paste0("X", col_index),
+    period    = v_periods,
+    metric    = v_sub
+  ) %>% mutate(
     is_period = grepl("^\\s*Between\\s*\\d{4}\\s*and\\s*\\d{4}\\s*$", period, perl = TRUE) &
                 metric %in% c("no","percent")
   )
 
-sel_meta <- meta %>% filter(is_period, col_index != state_idx)
+  v_sel <- v_meta %>% filter(is_period, col_index != v_state_idx)
+  if (nrow(v_sel) == 0) {
+    two_years <- grepl("\\b\\d{4}\\b.*\\b\\d{4}\\b", v_meta$period)
+    v_sel <- v_meta %>% filter(two_years, col_index != v_state_idx)
+    v_sel$metric[!v_sel$metric %in% c("no","percent")] <- "no"
+  }
+  v_yrs <- stringr::str_match(v_sel$period, "(?i)between\\s*(\\d{4}).*?and\\s*(\\d{4})")
+  v_sel$start_year <- suppressWarnings(as.integer(v_yrs[,2]))
+  v_sel$end_year   <- suppressWarnings(as.integer(v_yrs[,3]))
+  v_sel <- v_sel %>% filter(!is.na(start_year), !is.na(end_year))
 
-# fallback: any header with two 4‑digit years
-if (nrow(sel_meta) == 0) {
-  has_two_years <- grepl("\\b\\d{4}\\b.*\\b\\d{4}\\b", meta$period)
-  sel_meta <- meta %>% filter(has_two_years, col_index != state_idx)
-  sel_meta$metric[!sel_meta$metric %in% c("no","percent")] <- "no"
+  if (nrow(v_sel) > 0) {
+    v_keep <- v_data[, c(v_state_idx, v_sel$col_index), drop = FALSE]
+    names(v_keep)[1] <- "state"
+    v_pretty <- paste0("Between ", v_sel$start_year, " and ", v_sel$end_year, "_", v_sel$metric)
+    names(v_keep)[-1] <- v_pretty
+
+    v_long <- v_keep %>%
+      pivot_longer(cols = -state, names_to = "period_metric", values_to = "value_raw")
+    pm <- stringr::str_match(v_long$period_metric, "Between\\s*(\\d{4})\\s*and\\s*(\\d{4})_(no|percent)")
+    v_long$start_year <- suppressWarnings(as.integer(pm[,2]))
+    v_long$end_year   <- suppressWarnings(as.integer(pm[,3]))
+    v_long$metric     <- pm[,4]
+    v_long$value      <- readr::parse_number(as.character(v_long$value_raw))
+    v_long$period_lab <- paste0(v_long$start_year, "–", v_long$end_year)
+    v_long <- v_long %>% filter(!is.na(end_year))
+
+    v_vic <- v_long %>%
+      filter(str_detect(str_to_lower(state), "^\\s*vic\\.?\\s*$|\\bvictoria\\b") | str_detect(str_to_lower(state), "^\\s*vic")) %>%
+      arrange(end_year, metric)
+  } else {
+    v_vic <- tibble()
+  }
+} else {
+  v_vic <- tibble()
 }
 
-yr_mat <- stringr::str_match(sel_meta$period, "(?i)between\\s*(\\d{4}).*?and\\s*(\\d{4})")
-sel_meta$start_year <- suppressWarnings(as.integer(yr_mat[,2]))
-sel_meta$end_year   <- suppressWarnings(as.integer(yr_mat[,3]))
-sel_meta <- sel_meta %>% filter(!is.na(start_year), !is.na(end_year))
-stopifnot(nrow(sel_meta) > 0)
+# ==========================================================
+# ============== AC 1.2 — POPULATION (EXCEL) ===============
+# Auto-detect; if not found, show manual picker UI
+# ==========================================================
+pop_xlsx <- "data/32180DS0001_2001-21.xlsx"
+sheets <- tryCatch(readxl::excel_sheets(pop_xlsx), error = function(e) character())
 
-# =========================
-# Build a tidy table: state + period columns → long
-# =========================
-sel_idx <- sel_meta$col_index
-keep_df <- data[, c(state_idx, sel_idx), drop = FALSE]
-names(keep_df)[1] <- "state"
+# --- Auto-detect helper (best effort) ---
+read_pop_auto <- function(){
+  if (!length(sheets)) return(tibble())
+  for (sh in sheets) {
+    x <- tryCatch(readxl::read_excel(pop_xlsx, sheet = sh, col_names = FALSE), error = function(e) NULL)
+    if (is.null(x) || nrow(x) < 3) next
+    x <- as.data.frame(x, stringsAsFactors = FALSE)
+    x <- x[rowSums(is.na(x) | x == "") < ncol(x), , drop = FALSE]
+    x <- x[, colSums(is.na(x) | x == "") < nrow(x), drop = FALSE]
+    if (nrow(x) < 3 || ncol(x) < 3) next
 
-pretty_names <- paste0("Between ", sel_meta$start_year, " and ", sel_meta$end_year, "_", sel_meta$metric)
-names(keep_df)[-1] <- pretty_names
+    row_has_years <- sapply(seq_len(nrow(x)), function(i){
+      vals <- as.character(unlist(x[i, ], use.names = FALSE))
+      years_found <- stringr::str_extract_all(vals, "(19|20)\\d{2}") |> unlist()
+      sum(!is.na(as.integer(years_found)))
+    })
+    hdr_idx <- which(row_has_years >= 3)
+    if (!length(hdr_idx)) next
+    hdr_idx <- hdr_idx[1]
 
-long_df <- keep_df %>%
-  tidyr::pivot_longer(cols = -state, names_to = "period_metric", values_to = "value_raw")
+    hdr_vals <- as.character(unlist(x[hdr_idx, ], use.names = FALSE))
+    year_idx <- which(stringr::str_detect(hdr_vals, "(19|20)\\d{2}"))
+    if (!length(year_idx)) next
+    year_labels <- stringr::str_extract(hdr_vals[year_idx], "(19|20)\\d{2}")
 
-pm_mat <- stringr::str_match(long_df$period_metric, "Between\\s*(\\d{4})\\s*and\\s*(\\d{4})_(no|percent)")
-long_df$start_year <- suppressWarnings(as.integer(pm_mat[,2]))
-long_df$end_year   <- suppressWarnings(as.integer(pm_mat[,3]))
-long_df$metric     <- pm_mat[,4]
-long_df$value      <- readr::parse_number(as.character(long_df$value_raw))
-long_df$period_lab <- paste0(long_df$start_year, "–", long_df$end_year)
-long_df <- long_df %>% filter(!is.na(end_year))
+    data_block <- x[(hdr_idx+1):nrow(x), , drop = FALSE]
+    data_block[is.na(data_block)] <- ""
+    reg_hits <- sapply(seq_len(ncol(data_block)), function(j){
+      vals <- tolower(as.character(data_block[seq_len(min(200, nrow(data_block))), j, drop = TRUE]))
+      sum(grepl("melbourne", vals))
+    })
+    region_idx <- if (any(reg_hits > 0)) which.max(reg_hits) else 1L
 
-# Victoria only (handles Vic., VIC, Victoria, etc.)
-vic_long <- long_df %>%
-  filter(str_detect(str_to_lower(state), "^\\s*vic\\.?\\s*$|\\bvictoria\\b") | str_detect(str_to_lower(state), "^\\s*vic")) %>%
-  arrange(end_year, metric)
+    year_idx <- year_idx[year_idx <= ncol(data_block)]
+    region_idx <- max(1L, min(region_idx, ncol(data_block)))
 
-# =========================
-# Controls (plain Shiny)
-# =========================
-all_periods <- sort(unique(vic_long$period_lab))
-default_periods <- all_periods
+    df <- data_block[, c(region_idx, year_idx), drop = FALSE]
+    names(df) <- c("region", year_labels)
+    df$region <- as.character(df$region)
+    df <- df[df$region != "" & !is.na(df$region), , drop = FALSE]
 
-output$controls <- renderUI({
-  fluidRow(
-    column(5,
-      radioButtons("metric_pick", "Metric",
-        choices = c("Growth (Number)" = "no", "Growth (%)" = "percent"),
-        selected = "no", inline = TRUE
-      )
-    ),
-    column(7,
-      selectizeInput("periods", "Periods",
-        choices = all_periods, selected = default_periods,
-        multiple = TRUE, options = list(plugins = list("remove_button"))
-      )
+    long <- suppressWarnings(
+      df %>%
+        pivot_longer(cols = -region, names_to = "year", values_to = "population") %>%
+        mutate(
+          year = as.integer(gsub("\\D","", year)),
+          population = readr::parse_number(as.character(population))
+        ) %>%
+        filter(!is.na(year), !is.na(population))
     )
+    mel <- long %>% filter(grepl("(?i)melbourne", region))
+    if (nrow(mel)) {
+      mel <- mel %>% arrange(region, year) %>%
+        group_by(region) %>%
+        mutate(yoy = population - dplyr::lag(population),
+               yoy_pct = 100 * yoy / dplyr::lag(population)) %>%
+        ungroup()
+      return(mel)
+    }
+  }
+  tibble()
+}
+pop_auto <- read_pop_auto()
+
+# For manual picker, expose choices
+sheet_choices <- if (length(sheets)) sheets else character()
+
+# ==========================================================
+# ====================== UI (TABS) =========================
+# ==========================================================
+tabsetPanel(
+  id = "tabs",
+
+  # -------- Tab 1: AC 1.1 Vehicles --------
+  tabPanel(
+    title = "AC 1.1 — Car Ownership (VIC)",
+    div(class="section-title",
+        h2("AC 1.1 — Victoria: Car Ownership Growth"),
+        span(class="badge-soft", "Interactive • ABS CSV parsed • Epic 1")
+    ),
+    p("File:", code(normalizePath(veh_csv))),
+    hr(),
+    if (nrow(v_vic) == 0) {
+      tags$div(class="alert alert-warning",
+        h4("Vehicle table could not be parsed"),
+        p("Please confirm the CSV path and structure.")
+      )
+    } else {
+      tagList(
+        fluidRow(
+          column(5,
+            radioButtons("veh_metric", "Metric",
+              choices = c("Growth (Number)" = "no", "Growth (%)" = "percent"),
+              selected = "no", inline = TRUE
+            )
+          ),
+          column(7,
+            selectizeInput("veh_periods", "Periods",
+              choices = sort(unique(v_vic$period_lab)),
+              selected = sort(unique(v_vic$period_lab)),
+              multiple = TRUE, options = list(plugins = list("remove_button"))
+            )
+          )
+        ),
+        uiOutput("veh_cards"),
+        plotlyOutput("veh_plot", height = "420px"),
+        tags$br(),
+        DT::dataTableOutput("veh_table"),
+        tags$br(),
+        downloadButton("veh_download", "Download filtered CSV", class = "btn btn-primary")
+      )
+    }
+  ),
+
+  # -------- Tab 2: AC 1.2 Population --------
+  tabPanel(
+    title = "AC 1.2 — Population (Melbourne)",
+    div(class="section-title",
+        h2("AC 1.2 — Population Growth (Melbourne)"),
+        span(class="badge-soft", "Interactive • ABS 32180DS0001 • Epic 1")
+    ),
+    p("File:", code(normalizePath(pop_xlsx))),
+    hr(),
+
+    # AUTO MODE (works) OR MANUAL PICKER (fallback)
+    if (nrow(pop_auto) > 0) {
+      tagList(
+        uiOutput("pop_controls_auto"),
+        uiOutput("pop_cards"),
+        plotlyOutput("pop_plot", height = "440px"),
+        tags$br(),
+        DT::dataTableOutput("pop_table"),
+        tags$br(),
+        downloadButton("pop_download", "Download filtered CSV", class = "btn btn-success")
+      )
+    } else {
+      tagList(
+        tags$div(class="alert alert-warning",
+          h4("Population table not auto-detected"),
+          p("Use the picker below to choose the sheet and columns.")
+        ),
+        fluidRow(
+          column(4,
+            selectInput("pick_sheet", "Sheet", choices = sheet_choices)
+          ),
+          column(4,
+            uiOutput("pick_geo")
+          ),
+          column(4,
+            uiOutput("pick_years")
+          )
+        ),
+        uiOutput("pop_cards"),
+        plotlyOutput("pop_plot", height = "440px"),
+        tags$br(),
+        DT::dataTableOutput("pop_table"),
+        tags$br(),
+        downloadButton("pop_download", "Download filtered CSV", class = "btn btn-success")
+      )
+    }
   )
+)
+
+# ==========================================================
+# ==================== SERVER LOGIC ========================
+# ==========================================================
+
+# ---------- AC 1.1 reactives ----------
+veh_sel <- reactive({
+  req(nrow(v_vic) > 0)
+  sel_m <- (input$veh_metric %||% "no")
+  sel_p <- (input$veh_periods %||% unique(v_vic$period_lab))
+  v_vic %>% filter(metric == sel_m, period_lab %in% sel_p)
 })
 
-# =========================
-# Reactive view + key stats
-# =========================
-vic_sel <- reactive({
-  req(nrow(vic_long) > 0)
-  sel_m <- (input$metric_pick %||% "no")
-  sel_p <- (input$periods %||% all_periods)
-  vic_long %>% filter(metric == sel_m, period_lab %in% sel_p)
-})
-
-key_stats <- reactive({
-  df <- vic_sel(); if (!nrow(df)) return(NULL)
+veh_stats <- reactive({
+  df <- veh_sel(); if (!nrow(df)) return(NULL)
   latest_end <- max(df$end_year, na.rm = TRUE)
   latest <- df %>% filter(end_year == latest_end)
   list(
     latest_period = paste0(min(latest$start_year, na.rm = TRUE), "–", latest_end),
     latest_value  = sum(latest$value, na.rm = TRUE),
-    periods_n     = length(unique(df$period_lab)),
-    metric_label  = if (identical(input$metric_pick, "percent")) "%" else ""
+    n_periods     = length(unique(df$period_lab)),
+    is_pct        = identical(input$veh_metric, "percent")
   )
 })
 
-# =========================
-# Outputs — header, cards, chart, table, download
-# =========================
-div(class="section-title",
-  h2("AC 1.1 — Victoria: Car Ownership Growth"),
-  span(class="badge-soft", "Interactive • ABS parsed • Epic 1")
-)
-p("File: ", code(normalizePath(csv_path)))
-
-uiOutput("controls")
-
-output$cards <- renderUI({
-  ks <- key_stats(); if (is.null(ks)) return(NULL)
-  val_txt <- if (ks$metric_label == "%") sprintf("%.1f%%", ks$latest_value) else scales::number(ks$latest_value, big.mark=",")
+output$veh_cards <- renderUI({
+  ks <- veh_stats(); if (is.null(ks)) return(NULL)
+  val_txt <- if (ks$is_pct) sprintf("%.1f%%", ks$latest_value) else scales::number(ks$latest_value, big.mark=",")
   fluidRow(
     column(4, div(class="value-box", h5("Latest period"), h3(ks$latest_period))),
     column(4, div(class="value-box", h5("Latest value"),  h3(val_txt))),
-    column(4, div(class="value-box", h5("Periods shown"), h3(ks$periods_n)))
+    column(4, div(class="value-box", h5("Periods shown"), h3(ks$n_periods)))
   )
 })
-uiOutput("cards")
 
-output$line <- renderPlotly({
-  df <- vic_sel(); req(nrow(df) > 0)
-  y_lab <- if (identical(input$metric_pick, "percent")) "Percent" else "Number of vehicles"
-  hover_txt <- paste0(
-    "Period: ", df$period_lab,
-    "<br>Value: ", if (identical(input$metric_pick, "percent")) sprintf("%.1f%%", df$value) else scales::number(df$value, big.mark=",")
-  )
+output$veh_plot <- renderPlotly({
+  df <- veh_sel(); req(nrow(df) > 0)
+  y_lab <- if (identical(input$veh_metric, "percent")) "Percent" else "Number of vehicles"
+  hover_txt <- paste0("Period: ", df$period_lab, "<br>Value: ",
+                      if (identical(input$veh_metric, "percent")) sprintf("%.1f%%", df$value) else scales::number(df$value, big.mark=","))
   p <- ggplot(df, aes(end_year, value, group = 1, text = hover_txt)) +
     geom_line(linewidth = 1.2, color = "#0d6efd") +
     geom_point(size = 2.2, color = "#0d6efd") +
@@ -221,34 +335,165 @@ output$line <- renderPlotly({
     labs(title = "Victoria — Growth in Registered Motor Vehicles by Period",
          subtitle = "Parsed from ABS table with two‑row headers (Between … and … / no·%).",
          x = "Period", y = y_lab) +
-    theme_minimal(base_size = 13) +
-    theme(axis.text.x = element_text(angle = 0, hjust = 0.5))
+    theme_minimal(base_size = 13)
   ggplotly(p, tooltip = "text") %>% layout(margin = list(b = 80))
 })
-plotlyOutput("line", height = "440px")
 
-tags$br()
-
-output$table <- DT::renderDataTable({
-  df <- vic_sel(); req(nrow(df) > 0)
-  wide <- df %>%
-    select(period = period_lab, metric, value) %>%
-    tidyr::pivot_wider(names_from = metric, values_from = value)
+output$veh_table <- DT::renderDataTable({
+  df <- veh_sel(); req(nrow(df) > 0)
+  wide <- df %>% select(period = period_lab, metric, value) %>% pivot_wider(names_from = metric, values_from = value)
   if ("no" %in% names(wide))      wide$no      <- scales::number(wide$no, big.mark = ",")
   if ("percent" %in% names(wide)) wide$percent <- sprintf("%.1f", wide$percent)
-  datatable(
-    wide,
-    extensions = "Buttons",
-    options = list(pageLength = 8, dom = "Bfrtip", buttons = c("copy","csv","excel","print")),
-    rownames = FALSE
+  datatable(wide, extensions = "Buttons",
+            options = list(pageLength = 8, dom = "Bfrtip", buttons = c("copy","csv","excel","print")),
+            rownames = FALSE)
+})
+
+output$veh_download <- downloadHandler(
+  filename = function(){ paste0("vic_car_ownership_", Sys.Date(), ".csv") },
+  content  = function(file){ readr::write_csv(veh_sel(), file) }
+)
+
+# ---------- AC 1.2 reactives (AUTO MODE) ----------
+if (nrow(pop_auto) > 0) {
+  all_regions_auto <- sort(unique(pop_auto$region))
+  yr_min_auto <- min(pop_auto$year, na.rm = TRUE)
+  yr_max_auto <- max(pop_auto$year, na.rm = TRUE)
+
+  output$pop_controls_auto <- renderUI({
+    fluidRow(
+      column(6,
+        selectizeInput("pop_regions", "Melbourne region(s)",
+          choices = all_regions_auto,
+          selected = head(all_regions_auto, 5),
+          multiple = TRUE, options = list(plugins = list("remove_button","drag_drop"))
+        )
+      ),
+      column(6,
+        sliderInput("pop_years", "Year range",
+          min = yr_min_auto, max = yr_max_auto,
+          value = c(max(2010, yr_min_auto), yr_max_auto), step = 1, sep = "")
+      )
+    )
+  })
+
+  pop_sel <- reactive({
+    req(input$pop_regions, input$pop_years)
+    pop_auto %>% filter(region %in% input$pop_regions,
+                        year >= input$pop_years[1], year <= input$pop_years[2])
+  })
+
+} else {
+  # ---------- AC 1.2 reactives (MANUAL PICKER) ----------
+  # Step 1: after sheet pick, load with headers and show column choices
+  sheet_df <- reactive({
+    req(input$pick_sheet)
+    df <- suppressMessages(readxl::read_excel(pop_xlsx, sheet = input$pick_sheet))
+    as_tibble(df)
+  })
+
+  output$pick_geo <- renderUI({
+    df <- sheet_df(); req(ncol(df) > 1)
+    cand <- names(df)
+    selectInput("geo_col", "Region / Area column", choices = cand,
+                selected = cand[which.max(grepl("name|area|region|lga|gccsa|sa2|sa3|city", cand, ignore.case = TRUE)) %||% 1])
+  })
+
+  output$pick_years <- renderUI({
+    df <- sheet_df(); req(ncol(df) > 1)
+    # guess year columns by header names looking like years
+    cand_years <- names(df)[grepl("^\\s*(19|20)\\d{2}\\s*$", names(df))]
+    if (!length(cand_years)) {
+      # also allow numeric columns to be chosen
+      num_cols <- names(df)[sapply(df, is.numeric)]
+      cand_years <- num_cols
+    }
+    selectizeInput("year_cols", "Year columns",
+                   choices = names(df),
+                   selected = cand_years,
+                   multiple = TRUE, options = list(plugins = list("remove_button","drag_drop")))
+  })
+
+  pop_sel <- reactive({
+    req(input$geo_col, input$year_cols)
+    df <- sheet_df()
+    keep <- c(input$geo_col, input$year_cols)
+    keep <- keep[keep %in% names(df)]
+    req(length(keep) >= 2)
+    long <- df %>%
+      select(all_of(keep)) %>%
+      pivot_longer(cols = all_of(setdiff(keep, input$geo_col)),
+                   names_to = "year", values_to = "population") %>%
+      rename(region = all_of(input$geo_col)) %>%
+      mutate(
+        year = suppressWarnings(as.integer(gsub("\\D","", as.character(year)))),
+        population = readr::parse_number(as.character(population))
+      ) %>%
+      filter(!is.na(year), !is.na(population),
+             grepl("(?i)melbourne", region))
+    if (!nrow(long)) return(tibble(region=character(),year=integer(),population=numeric()))
+    long %>%
+      arrange(region, year) %>%
+      group_by(region) %>%
+      mutate(yoy = population - dplyr::lag(population),
+             yoy_pct = 100 * yoy / dplyr::lag(population)) %>%
+      ungroup()
+  })
+}
+
+# ---------- AC 1.2 KPIs / chart / table (shared) ----------
+pop_kpis <- reactive({
+  df <- pop_sel(); if (!nrow(df)) return(NULL)
+  latest_y <- max(df$year, na.rm = TRUE)
+  latest <- df %>% filter(year == latest_y)
+  base_y  <- min(df$year, na.rm = TRUE)
+  base    <- df %>% filter(year == base_y)
+  list(
+    latest_year  = latest_y,
+    total_latest = sum(latest$population, na.rm = TRUE),
+    growth_abs   = sum(latest$population, na.rm = TRUE) - sum(base$population, na.rm = TRUE),
+    growth_pct   = 100 * (sum(latest$population, na.rm = TRUE) / sum(base$population, na.rm = TRUE) - 1),
+    regions_n    = length(unique(df$region))
   )
 })
-DT::dataTableOutput("table")
 
-tags$br()
+output$pop_cards <- renderUI({
+  ks <- pop_kpis(); if (is.null(ks)) return(NULL)
+  fluidRow(
+    column(3, div(class="value-box green", h5("Latest year"),  h3(ks$latest_year))),
+    column(3, div(class="value-box green", h5("Latest total"), h3(scales::number(ks$total_latest, big.mark=",")))),
+    column(3, div(class="value-box green", h5("Growth (abs)"), h3(scales::number(ks$growth_abs, big.mark=",")))),
+    column(3, div(class="value-box green", h5("Growth (%)"),  h3(sprintf("%.1f%%", ks$growth_pct))))
+  )
+})
 
-output$download_csv <- downloadHandler(
-  filename = function(){ paste0("vic_car_ownership_", Sys.Date(), ".csv") },
-  content  = function(file){ readr::write_csv(vic_sel(), file) }
+output$pop_plot <- renderPlotly({
+  df <- pop_sel(); req(nrow(df) > 0)
+  p <- ggplot(df, aes(year, population, color = region, group = region)) +
+    geom_line(linewidth = 1.1) +
+    geom_point(size = 2) +
+    scale_y_continuous(labels = scales::label_number(big.mark=",")) +
+    scale_x_continuous(breaks = pretty(df$year)) +
+    labs(title = "Melbourne Population Growth",
+         subtitle = "ABS 32180DS0001 (auto or manual selection)",
+         x = "Year", y = "Population", color = "Region") +
+    theme_minimal(base_size = 13)
+  ggplotly(p, tooltip = c("x","y","color")) %>% layout(legend = list(orientation = "h"))
+})
+
+output$pop_table <- DT::renderDataTable({
+  df <- pop_sel(); req(nrow(df) > 0)
+  view <- df %>% arrange(region, year) %>%
+    transmute(region, year,
+              population = scales::number(population, big.mark = ","),
+              yoy = ifelse(is.na(yoy), NA, scales::number(yoy, big.mark=",")),
+              yoy_pct = ifelse(is.na(yoy_pct), NA, sprintf("%.1f%%", yoy_pct)))
+  datatable(view, extensions = "Buttons",
+            options = list(pageLength = 10, dom = "Bfrtip", buttons = c("copy","csv","excel","print")),
+            rownames = FALSE)
+})
+
+output$pop_download <- downloadHandler(
+  filename = function(){ paste0("melbourne_population_", Sys.Date(), ".csv") },
+  content  = function(file){ readr::write_csv(pop_sel(), file) }
 )
-downloadButton("download_csv", "Download filtered CSV", class = "btn btn-primary")
