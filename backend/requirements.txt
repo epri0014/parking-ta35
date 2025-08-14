@@ -9,5 +9,3 @@ joblib
 python-dateutil
 pytz
 supabase
-asyncpg
-certifi

@@ -1,47 +1,43 @@
 import httpx
 from typing import List, Dict, Any
-from app.services.db import fetch
+from starlette.concurrency import run_in_threadpool
+from app.services.db import fetch_all, fetch_all_expanding
 
 BASE_SENSOR_URL = "https://data.melbourne.vic.gov.au/api/explore/v2.1/catalog/datasets/on-street-parking-bay-sensors/records"
 
-# ---------- helpers to read from DB views ----------
+# ---------- helpers to read from DB views (sync), wrapped via threadpool ----------
 
-async def _fetch_bays_by_kerbside_ids(kerbside_ids: List[str]) -> Dict[str, Dict[str, Any]]:
-    """
-    Return one enriched row per kerbside_id (pick the first zone if multiple).
-    You can choose to return all zones if you prefer (group by kerbside_id).
-    """
+def _db_fetch_bays_by_kerbside_ids(kerbside_ids: List[str]) -> Dict[str, Dict[str, Any]]:
     if not kerbside_ids:
         return {}
-    # DISTINCT ON picks a single row per kerbside_id (first by parking_zone asc)
-    q = """
+    rows = fetch_all_expanding(
+        """
         SELECT DISTINCT ON (kerbside_id)
             kerbside_id,
             bay_id,
             road_segment_id,
             road_segment_description,
-            latitude, longitude,
             ST_Y(geom)::float AS lat,
             ST_X(geom)::float AS lon,
             parking_zone,
             on_street, street_from, street_to,
             restrictions_json
         FROM v_bays_enriched_json
-        WHERE kerbside_id = ANY($1::text[])
+        WHERE kerbside_id IN :ids
         ORDER BY kerbside_id, parking_zone ASC NULLS LAST;
-    """
-    rows = await fetch(q, kerbside_ids)
+        """,
+        "ids",
+        kerbside_ids,
+    )
     out: Dict[str, Dict[str, Any]] = {}
     for r in rows:
-        out[r["kerbside_id"]] = dict(r)
+        m = dict(r._mapping)
+        out[str(m["kerbside_id"])] = m
     return out
 
-async def _fetch_nearby_bays_from_db(lat: float, lon: float, limit: int = 20, radius_m: int = 1000) -> List[Dict[str, Any]]:
-    """
-    Nearest enriched bays (with restrictions_json) using the view.
-    This is used by the prediction pipeline.
-    """
-    q = """
+def _db_fetch_nearby_bays(lat: float, lon: float, limit: int = 20, radius_m: int = 1000) -> List[Dict[str, Any]]:
+    rows = fetch_all(
+        """
         SELECT
           bay_id,
           kerbside_id,
@@ -53,14 +49,15 @@ async def _fetch_nearby_bays_from_db(lat: float, lon: float, limit: int = 20, ra
         FROM v_bays_enriched_json
         WHERE ST_DWithin(
             geom::geography,
-            ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
-            $3
+            ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography,
+            :radius
         )
-        ORDER BY geom <-> ST_SetSRID(ST_MakePoint($1, $2), 4326)
-        LIMIT $4;
-    """
-    rows = await fetch(q, lon, lat, radius_m, limit)  # note lon, lat
-    return [dict(r) for r in rows]
+        ORDER BY geom <-> ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)
+        LIMIT :limit;
+        """,
+        {"lon": float(lon), "lat": float(lat), "radius": int(radius_m), "limit": int(limit)},
+    )
+    return [dict(r._mapping) for r in rows]
 
 # ---------- public API + DB enrichment ----------
 
@@ -86,45 +83,39 @@ async def query_realtime_bays(lat: float, lon: float) -> List[Dict[str, Any]]:
         if not bays:
             return []
 
-        kerbside_ids = [str(b["kerbsideid"]) for b in bays if b.get("kerbsideid") is not None]
+    kerbside_ids = [str(b["kerbsideid"]) for b in bays if b.get("kerbsideid") is not None]
 
-        # Enrich from DB by kerbside_id
-        db_map = await _fetch_bays_by_kerbside_ids(kerbside_ids)
+    # Run blocking DB call in a thread
+    db_map = await run_in_threadpool(_db_fetch_bays_by_kerbside_ids, kerbside_ids)
 
-        enriched: List[Dict[str, Any]] = []
-        for b in bays:
-            kid = str(b.get("kerbsideid"))
-            live = {
-                "kerbsideid": kid,
-                "zone_number": b.get("zone_number"),
-                "lat": b["location"]["lat"],
-                "lon": b["location"]["lon"],
-                "lastupdated": b.get("lastupdated"),
-                "status_timestamp": b.get("status_timestamp"),
-                "status_description": b.get("status_description"),
-            }
-            meta = db_map.get(kid)
-            if meta:
-                enriched.append({
-                    **live,
-                    "description": meta.get("road_segment_description", "No description"),
-                    "restrictions": meta.get("restrictions_json", []) or [],
-                })
-            else:
-                # Fallback if DB has no row for this kerbside_id
-                enriched.append({
-                    **live,
-                    "description": "No description",
-                    "restrictions": []
-                })
-        return enriched
+    enriched: List[Dict[str, Any]] = []
+    for b in bays:
+        kid = str(b.get("kerbsideid"))
+        live = {
+            "kerbsideid": kid,
+            "zone_number": b.get("zone_number"),
+            "lat": b["location"]["lat"],
+            "lon": b["location"]["lon"],
+            "lastupdated": b.get("lastupdated"),
+            "status_timestamp": b.get("status_timestamp"),
+            "status_description": b.get("status_description"),
+        }
+        meta = db_map.get(kid)
+        if meta:
+            enriched.append({
+                **live,
+                "description": meta.get("road_segment_description", "No description"),
+                "restrictions": meta.get("restrictions_json", []) or [],
+            })
+        else:
+            enriched.append({**live, "description": "No description", "restrictions": []})
+    return enriched
 
 async def query_nearby_for_prediction(lat: float, lon: float) -> List[Dict[str, Any]]:
     """
     Only DB (no public API): nearest candidates with geometry/description/zone/restrictions.
     """
-    rows = await _fetch_nearby_bays_from_db(lat, lon, limit=20, radius_m=1000)
-    # Shape to your Prediction schema
+    rows = await run_in_threadpool(_db_fetch_nearby_bays, lat, lon, 20, 1000)
     out: List[Dict[str, Any]] = []
     for r in rows:
         out.append({

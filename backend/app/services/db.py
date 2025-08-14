@@ -1,48 +1,48 @@
+# app/services/db.py
 import os
-import ssl
-import certifi
-from typing import Optional, List
-import asyncpg
+from typing import Any, List, Optional, Sequence, Mapping
+from sqlalchemy import create_engine, text, bindparam
+from sqlalchemy.engine import Engine, Row
+from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
 
-_POOL: Optional[asyncpg.Pool] = None
+_ENGINE: Optional[Engine] = None
 
-DB_URL = os.getenv("SUPABASE_DB_URL")
-if not DB_URL:
-    raise RuntimeError("Missing SUPABASE_DB_URL environment variable")
+def _ensure_sslmode(dsn: str) -> str:
+    """Guarantee sslmode=require is present for Supabase."""
+    url = urlparse(dsn)
+    query = dict(parse_qsl(url.query, keep_blank_values=True))
+    query.setdefault("sslmode", "require")
+    return urlunparse(url._replace(query=urlencode(query)))
 
-def _build_ssl_ctx() -> ssl.SSLContext:
-    # Use certifi's CA bundle to avoid "self-signed in chain" issues
-    ctx = ssl.create_default_context(cafile=certifi.where())
-    ctx.check_hostname = True
-    ctx.verify_mode = ssl.CERT_REQUIRED
-    return ctx
-
-_SSL_CTX = _build_ssl_ctx()
-
-async def init_pool(min_size: int = 1, max_size: int = 10) -> asyncpg.Pool:
-    global _POOL
-    if _POOL is None:
-        _POOL = await asyncpg.create_pool(
-            dsn=DB_URL,                 # e.g. ...?sslmode=require
-            min_size=min_size,
-            max_size=max_size,
-            ssl=_SSL_CTX,               # <- important
-            command_timeout=60,
+def get_engine() -> Engine:
+    global _ENGINE
+    if _ENGINE is None:
+        db_url = os.getenv("SUPABASE_DB_URL")
+        if not db_url:
+            raise RuntimeError("Missing SUPABASE_DB_URL")
+        db_url = _ensure_sslmode(db_url)
+        _ENGINE = create_engine(
+            db_url,
+            pool_pre_ping=True,
+            pool_size=5,
+            max_overflow=5,
+            future=True,
         )
-    return _POOL
+    return _ENGINE
 
-async def close_pool():
-    global _POOL
-    if _POOL is not None:
-        await _POOL.close()
-        _POOL = None
+def fetch_all(sql: str, params: Optional[Mapping[str, Any]] = None) -> List[Row]:
+    eng = get_engine()
+    with eng.connect() as conn:
+        return list(conn.execute(text(sql), params or {}))
 
-async def fetch(query: str, *args) -> List[asyncpg.Record]:
-    if _POOL is None:
-        await init_pool()
-    async with _POOL.acquire() as conn:
-        return await conn.fetch(query, *args)
-
-async def fetchrow(query: str, *args):
-    rows = await fetch(query, *args)
-    return rows[0] if rows else None
+def fetch_all_expanding(sql: str, name: str, seq: Sequence[Any], other_params: Optional[Mapping[str, Any]] = None) -> List[Row]:
+    """
+    Helper for IN (:name) with expanding params.
+    Example:
+      sql = "SELECT * FROM t WHERE col IN :ids"
+      rows = fetch_all_expanding(sql, "ids", ["a","b"])
+    """
+    eng = get_engine()
+    stmt = text(sql).bindparams(bindparam(name, expanding=True))
+    with eng.connect() as conn:
+        return list(conn.execute(stmt, {**(other_params or {}), name: list(seq)}))
