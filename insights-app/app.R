@@ -191,9 +191,9 @@ ui <- fluidPage(
 
     # -------- AC 1.1 --------
     tabPanel(
-      title = "AC 1.1 - Car Ownership (VIC)",
-      div(class="section-title", h2("AC 1.1 - Victoria: Car Ownership Growth")),
-      p(class="subtle", "Data source: ABS - Motor Vehicle Census (CSV)"),
+      title = "Car Ownership (VIC)",
+      div(class="section-title", h2("Victoria: Car Ownership Growth")),
+      p(class="subtle", "Data source: ABS - Motor Vehicle Census"),
       hr(),
       uiOutput("controls_veh"),
       uiOutput("cards_veh"),
@@ -208,9 +208,9 @@ ui <- fluidPage(
 
     # -------- AC 1.2 --------
     tabPanel(
-      title = "AC 1.2 - Population (Melbourne)",
-      div(class="section-title", h2("AC 1.2 - Population Growth (Melbourne)")),
-      p(class="subtle", "Data source: ABS - 32180DS0001 (Excel)"),
+      title = "Population (Melbourne)",
+      div(class="section-title", h2("Population Growth (Melbourne)")),
+      p(class="subtle", "Data source: ABS - 32180DS0001"),
       hr(),
       uiOutput("controls_pop"),
       uiOutput("cards_pop"),
