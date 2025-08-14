@@ -4,7 +4,6 @@ from app.services.predict import predict_for_candidates
 from app.schemas.prediction import PredictionRequest, PredictionResponse, PredictionResult
 from app.utils.time import parse_to_melbourne, derive_time_features
 from datetime import datetime
-from app.services.db import fetch
 
 router = APIRouter()
 
@@ -60,8 +59,3 @@ def get_population(state_id: int):
 @router.get("/insights/vehicles")
 def get_motor_vehicles(state_id: int):
     return insights.fetch_motor_vehicles(state_id)
-
-@router.get("/health/db")
-async def db_health():
-    row = await fetch("SELECT 1 AS ok;")
-    return {"db_ok": bool(row)}
