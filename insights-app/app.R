@@ -1,6 +1,3 @@
-# app.R - Shiny version of your R Markdown (runtime: shiny)
-# Deploy this folder (insights-app/) with rsconnect::deployApp()
-
 # =========================
 # Libraries
 # =========================
