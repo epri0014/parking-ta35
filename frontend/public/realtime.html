@@ -2,24 +2,13 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>ParkFinder - AI Prediction</title>
+  <title>ParkFinder - Real-Time</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-
-  <!-- Flatpickr (normal input with OK/Apply) -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/confirmDate/confirmDate.css">
-
   <link rel="stylesheet" href="css/styles.css" />
-  <style>
-    #map { height: 80vh; }
-  </style>
+  <style>#map { height: 80vh; }</style>
 </head>
 <body>
   <nav class="navbar navbar-expand-lg navbar-dark navbar-eco sticky-top shadow-sm">
@@ -53,61 +42,24 @@
 
   <div class="container mt-3">
     <div id="backHomeSlot" class="mb-2"></div>
-    <h3>AI Predictions &#127919;</h3>
-
-    <div class="row g-3 align-items-end mb-2">
-      <!-- Location search -->
-      <div class="col-12 col-md-6 position-relative search-stack">
-        <input
-          type="text"
-          id="searchBox"
-          class="form-control dropdown-toggle pe-5"
-          data-bs-toggle="dropdown"
-          data-bs-display="static"
-          placeholder="1. Type a location or choose My Location..."
-          autocomplete="off"
-          autofocus
-        >
-        <button id="clearBtn" type="button" class="btn btn-sm position-absolute top-50 end-0 translate-middle-y me-2 d-none">&times;</button>
-        <ul class="dropdown-menu w-100" id="searchResults">
-          <li><a class="dropdown-item" href="#" data-type="my-location">&#128205; My Location</a></li>
-        </ul>
-      </div>
-
-      <!-- Normal (non-inline) Flatpickr input -->
-      <div class="col-12 col-md-6">
-        <!-- <label for="dtInline" class="form-label mb-1">Select date & time (future)</label> -->
-        <!-- Hidden native mirror (kept if you ever need it) -->
-        <input type="datetime-local" id="dtPicker" class="form-control d-none">
-
-        <!-- Visible picker field -->
-        <input type="text" id="dtInline" class="form-control" placeholder="2. Select date & time" disabled readonly>
-        <!-- <div class="form-text">Pick a date & time, then press <b>OK / Apply</b>.</div> -->
-      </div>
-      
+    <h3>Real-Time Search &#128269;</h3>
+    <div class="position-relative mb-3 search-stack">
+      <input type="text" id="searchBox" class="form-control dropdown-toggle pe-5" data-bs-toggle="dropdown" data-bs-display="static" placeholder="Type a location or choose My Location..." autocomplete="off" autofocus>
+      <button id="clearBtn" type="button" class="btn btn-sm position-absolute top-50 end-0 translate-middle-y me-2 d-none">&times;</button>
+      <ul class="dropdown-menu w-100" id="searchResults">
+        <li><a class="dropdown-item" href="#" data-type="my-location">&#128205; My Location</a></li>
+      </ul>
     </div>
-
     <div id="map"></div>
   </div>
 
-  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <!-- Axios -->
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-
-  <!-- Flatpickr JS + Confirm plugin -->
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/confirmDate/confirmDate.min.js"></script>
-  <!-- Config -->
   <script src="js/env.js"></script>
-  <!-- Common (brand/back-home) -->
   <script src="js/common.js"></script>
-  <!-- App Logic -->
-  <script src="js/prediction.js"></script>
+  <script src="js/realtime.js"></script>
 
-  <!-- Footer -->
   <footer class="bg-dark text-light py-3 mt-5">
     <div class="container text-center small">
       © 2025 MindMerge - All rights reserved.

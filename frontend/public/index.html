@@ -1,74 +1,98 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Parking Finder TA35</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Bootstrap CSS -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ParkFinder - Home</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="css/styles.css" />
-
-  <style>
-    #map { height: 80vh; }
-  </style>
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark navbar-eco sticky-top shadow-sm">
     <div class="container-fluid">
-      <a class="navbar-brand fw-bold" href="#">Parking Finder TA35</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <!-- Brand (truncates on small screens) -->
+      <a class="navbar-brand m-0 me-2 d-flex align-items-center text-truncate" href="index.html">
+        <span class="brand-name">ParkFinder</span>
+        <span class="brand-sep d-none d-sm-inline">&nbsp;-&nbsp;</span>
+        <!-- Hide catchphrase on xs; show from md up -->
+        <span class="brand-tag d-none d-md-inline">Less Circling, More Living</span>
+      </a>
+
+      <!-- Hamburger aligned to the right -->
+      <button class="navbar-toggler ms-auto" type="button"
+              data-bs-toggle="collapse" data-bs-target="#navbarNav"
+              aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
-    
+
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ms-auto">
-          <li class="nav-item">
-            <a class="nav-link active" href="index.html">Real-Time</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="prediction.html">Prediction</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="insight.html">Data Insight</a>
-          </li>
+          <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="realtime.html">Real-Time</a></li>
+          <li class="nav-item"><a class="nav-link" href="prediction.html">AI Predictions</a></li>
+          <li class="nav-item"><a class="nav-link" href="insight.html">Data Insight</a></li>
+          <li class="nav-item"><a class="nav-link" href="insight-deep.html">Deeper Insight</a></li>
         </ul>
       </div>
     </div>
-  </nav>
+</nav>
 
-  <div class="container mt-3">
-    <h2>Real-Time</h2>
-    <div class="position-relative mb-3">
-      <input type="text" id="searchBox" class="form-control dropdown-toggle pe-5" data-bs-toggle="dropdown" placeholder="Type a location..." autocomplete="off">
-      
-      <!-- Clear Button (×) -->
-      <button id="clearBtn" type="button" class="btn btn-sm position-absolute top-50 end-0 translate-middle-y me-2 d-none">
-        &times;
-      </button>
-
-      <ul class="dropdown-menu w-100" id="searchResults">
-        <li><a class="dropdown-item" href="#" data-type="my-location">&#128205; My Location</a></li>
-      </ul>
+  <!-- Hero -->
+  <header class="py-5 hero-eco border-0">
+    <div class="container">
+      <h1 class="display-6 fw-bold">Welcome to <span class="brand-text">ParkFinder</span> &#128064;</h1>
+      <p class="lead mt-2 mb-0">A simple way to <strong>find now</strong>, <strong>plan ahead</strong>, and <strong>learn from data</strong> about parking in Melbourne.</p>
     </div>
+  </header>
 
-    <div id="map"></div>
-  </div>
+  <!-- Cards / CTAs -->
+  <main class="container my-4">
+    <div class="row g-3">
+      <div class="col-12 col-md-4">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">Real-Time Search &#128269;</h5>
+            <p class="card-text">See nearby available bays on a live map.
+              If you want to search in real time, click below.</p>
+            <a href="realtime.html" class="btn btn-primary w-100">Open Real-Time</a>
+          </div>
+        </div>
+      </div>
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <!-- Bootstrap JS -->
+      <div class="col-12 col-md-4">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">AI Predictions &#127919;</h5>
+            <p class="card-text">Pick a future date/time and get predicted availability.
+              If you want to plan using our AI, click below.</p>
+            <a href="prediction.html" class="btn btn-primary w-100">Open AI Prediction</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">Data-Driven Insight &#128202;</h5>
+            <p class="card-text">Explore car ownership and population trends.
+              If you want insights, click below.</p>
+            <div class="d-grid gap-2">
+              <a href="insight.html" class="btn btn-primary w-100">Open Data Insight</a>
+              <a href="insight-deep.html" class="btn btn-primary w-100">Open Deeper Insight</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <!-- Axios -->
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  <!-- Config (set ENV.BACKEND_URL) -->
-  <script src="js/env.js"></script>
-  <!-- App Logic -->
-  <script src="js/app.js"></script>
-
+  <script src="js/common.js"></script>
+  <footer class="bg-dark text-light py-3 mt-5">
+    <div class="container text-center small">
+      © 2025 MindMerge - All rights reserved.
+    </div>
+  </footer>
 </body>
 </html>
