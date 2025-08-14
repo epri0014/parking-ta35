@@ -10,3 +10,4 @@ python-dateutil
 pytz
 supabase
 asyncpg
+certifi

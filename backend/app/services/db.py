@@ -1,9 +1,9 @@
 # app/services/db.py
 import os
 import ssl
-import asyncio
-from typing import Any, Dict, List, Optional
 import asyncpg
+import certifi  # NEW
+from typing import Optional
 
 _POOL: Optional[asyncpg.Pool] = None
 
@@ -11,8 +11,10 @@ DB_URL = os.getenv("SUPABASE_DB_URL")
 if not DB_URL:
     raise RuntimeError("Missing SUPABASE_DB_URL environment variable")
 
-# Supabase requires SSL
-_SSL_CTX = ssl.create_default_context()
+# Use certifi's CA bundle so verification succeeds everywhere.
+_SSL_CTX = ssl.create_default_context(cafile=certifi.where())
+_SSL_CTX.check_hostname = True
+_SSL_CTX.verify_mode = ssl.CERT_REQUIRED
 
 async def init_pool(min_size: int = 1, max_size: int = 10) -> asyncpg.Pool:
     global _POOL
@@ -21,7 +23,7 @@ async def init_pool(min_size: int = 1, max_size: int = 10) -> asyncpg.Pool:
             dsn=DB_URL,
             min_size=min_size,
             max_size=max_size,
-            ssl=_SSL_CTX,
+            ssl=_SSL_CTX,          # << keep verification on
             command_timeout=60,
         )
     return _POOL
@@ -32,12 +34,12 @@ async def close_pool():
         await _POOL.close()
         _POOL = None
 
-async def fetch(query: str, *args) -> List[asyncpg.Record]:
+async def fetch(query: str, *args):
     if _POOL is None:
         await init_pool()
     async with _POOL.acquire() as conn:
         return await conn.fetch(query, *args)
 
-async def fetchrow(query: str, *args) -> Optional[asyncpg.Record]:
+async def fetchrow(query: str, *args):
     rows = await fetch(query, *args)
     return rows[0] if rows else None
