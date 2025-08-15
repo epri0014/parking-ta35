@@ -4,3 +4,8 @@ httpx
 sqlalchemy
 psycopg2-binary
 python-dotenv
+scikit-learn
+joblib
+python-dateutil
+pytz
+supabase

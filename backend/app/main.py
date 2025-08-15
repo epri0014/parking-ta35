@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
@@ -6,7 +9,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Set this to your frontend domain in prod
+    allow_origins=["*"],  # frontend domain in prod
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

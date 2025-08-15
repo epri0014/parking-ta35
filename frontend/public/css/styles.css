@@ -1,12 +1,209 @@
+/* =============== ECO THEME =============== */
+/* Accessible eco palette (WCAG-friendly) */
+:root {
+  --pf-primary: #2e7d32;     /* eco green */
+  --pf-primary-600: #1b5e20; /* deeper green */
+  --pf-primary-500: #2e7d32;
+  --pf-primary-400: #43a047;
+  --pf-accent:  #26a69a;     /* teal accent */
+  --pf-leaf-1:  #e8f5e9;     /* pale green bg */
+  --pf-leaf-2:  #f0fff4;     /* extra pale */
+  --pf-ink:     #0b1d14;     /* deep ink for text on light */
+  --pf-on-dark: #e9f7ee;     /* text on dark green */
+  --pf-link:    #1b9e77;     /* eco link */
+
+  /* Remap Bootstrap CSS variables (BS 5.3) */
+  --bs-primary:             var(--pf-primary);
+  --bs-primary-rgb:         46,125,50;
+  --bs-link-color:          var(--pf-link);
+  --bs-link-hover-color:    #107b5b;
+  --bs-body-color:          var(--pf-ink);
+  --bs-body-bg:             #ffffff;
+}
+
+/* Navbar-deep green gradient */
+.navbar-eco {
+  background: linear-gradient(90deg, var(--pf-primary-600), var(--pf-primary-500));
+}
+.navbar-eco .navbar-brand,
+.navbar-eco .nav-link {
+  color: var(--pf-on-dark) !important;
+}
+.navbar-eco .nav-link.active,
+.navbar-eco .nav-link:hover {
+  color: #ffffff !important;
+  text-shadow: 0 0 1px rgba(255,255,255,.15);
+}
+
+/* Hero-soft leafy gradient */
+.hero-eco {
+  background: radial-gradient(1200px 600px at 10% -10%, var(--pf-leaf-2) 0%, #fff 60%),
+              linear-gradient(180deg, var(--pf-leaf-1), #fff 55%);
+}
+
+/* Cards with eco border + hover lift */
+.card {
+  border: 1px solid rgba(27,94,32,0.08);
+  transition: transform .15s ease, box-shadow .15s ease, border-color .2s ease;
+}
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 .75rem 1.5rem rgba(27,94,32,.08);
+  border-color: rgba(27,94,32,0.2);
+}
+.card .card-title {
+  color: var(--pf-primary-600);
+  font-weight: 700;
+}
+
+/* Buttons-primary remapped to eco; add .btn-eco alias if you want */
+.btn-primary,
+.btn-eco {
+  --bs-btn-bg: var(--pf-primary);
+  --bs-btn-border-color: var(--pf-primary);
+  --bs-btn-hover-bg: var(--pf-primary-600);
+  --bs-btn-hover-border-color: var(--pf-primary-600);
+  --bs-btn-active-bg: var(--pf-primary-600);
+  --bs-btn-active-border-color: var(--pf-primary-600);
+  --bs-btn-color: #fff;
+}
+
+/* Links */
+a { color: var(--bs-link-color); }
+a:hover { color: var(--bs-link-hover-color); }
+
+/* Subtle eco focus ring */
+:focus-visible {
+  outline: 3px solid rgba(38,166,154,.35);
+  outline-offset: 2px;
+}
+
+/* Leaflet map controls-slight rounding */
+.leaflet-control {
+  border-radius: .5rem !important;
+}
+
+/* =============== YOUR EXISTING RULES (kept) =============== */
 .spinner-border {
-  width: 1rem;
-  height: 1rem;
-  margin-right: 0.5rem;
+  width: 1rem; height: 1rem; margin-right: 0.5rem;
 }
 #clearBtn {
-  border: none;
-  background: transparent;
-  font-size: 1.2rem;
-  color: #666;
-  z-index: 2;
+  border: none; background: transparent; font-size: 1.2rem; color: #666; z-index: 2;
+}
+/* Flatpickr confirm button visibility/contrast */
+.flatpickr-confirm {
+  background: var(--pf-primary) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: .25rem !important;
+  padding: .375rem .75rem !important;
+  font-size: .875rem !important;
+  line-height: 1.5 !important;
+  cursor: pointer !important;
+}
+.flatpickr-confirm:hover { filter: brightness(0.95); }
+
+/* Ensure footer area is padded and aligned */
+.flatpickr-footer,
+.flatpickr-confirm-container {
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: .5rem; padding: .5rem .75rem !important;
+}
+
+/* Some mobile browsers need this to avoid clipping in flex/overflow parents */
+.flatpickr-calendar.open { position: absolute !important; }
+
+/* Brand should never wrap; ellipsis on small screens */
+.navbar .navbar-brand {
+  max-width: 75vw; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+@media (max-width: 576px) {
+  .navbar .navbar-brand { max-width: 60vw; font-size: 1rem; }
+}
+
+/* Ensure dropdowns and search stack sit above the map */
+.search-stack { position: relative; }
+.search-stack .dropdown-menu {
+  z-index: 1040 !important;
+  max-height: 50vh; overflow-y: auto;
+  box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+}
+
+/* Flatpickr above map/nav */
+.flatpickr-calendar { z-index: 20000 !important; }
+
+/* Keep the info icon neat in popups */
+.leaflet-popup-content .info-restrict { font-size: 0.95rem; text-decoration: none; }
+.leaflet-popup-content .info-restrict:hover { text-decoration: underline; }
+
+/* When a modal is open, make the map & search area non-interactive */
+body.modal-open .search-stack,
+body.modal-open .leaflet-control-container,
+body.modal-open .leaflet-pane,
+body.modal-open .leaflet-top,
+body.modal-open .leaflet-bottom { pointer-events: none !important; }
+body.modal-open .dropdown-menu.show { display: none !important; }
+.modal-backdrop { z-index: 1050 !important; }
+.modal          { z-index: 1060 !important; }
+
+/* Likelihood stars */
+.stars { letter-spacing: 1px; font-size: .95rem; vertical-align: baseline; }
+.stars-5, .stars-4 { color: #198754; }
+.stars-3           { color: #6c757d; }
+.stars-2, .stars-1 { color: #dc3545; }
+
+.prediction-note { font-size: 0.8rem; font-style: italic; }
+
+.popup-actions a.gmaps-link { text-decoration: none; font-size: .9rem; }
+.popup-actions .gmaps-emoji { font-size: 1rem; vertical-align: -2px; }
+
+/* Footer-eco dark */
+footer.bg-dark {
+  background: linear-gradient(0deg, var(--pf-primary-600), var(--pf-primary-500)) !important;
+  color: var(--pf-on-dark);
+}
+
+/* Make the wrapper size to the image and allow absolute positioning for credit */
+.image-credit-wrapper {
+  position: relative;
+  display: inline-block;   /* shrink-wrap to the image width */
+}
+
+/* Responsive image:
+   - Always scale down to container on small screens
+   - Cap width on tablets/desktop (no more "too big") */
+.hero-illustration {
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+}
+@media (min-width: 768px) {           /* md and up */
+  .hero-illustration { max-width: 600px; }  /* your desired cap */
+}
+
+/* Credit badge overlay */
+.credit-text {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: clamp(10px, 2.6vw, 12px); /* scales gently on small screens */
+  padding: 4px 8px;
+  border-radius: 4px;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;                 /* not clickable */
+  opacity: 0;                           /* hidden by default */
+  transition: opacity .2s ease;
+}
+
+/* Show credit on hover for desktop… */
+.image-credit-wrapper:hover .credit-text { opacity: 1; }
+
+/* …but always show on touch/mobile (no hover there) */
+@media (hover: none), (pointer: coarse) {
+  .credit-text { opacity: 1; }
 }
